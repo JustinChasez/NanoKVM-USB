@@ -27,12 +27,19 @@ export class SerialPort {
       const path = options.path
       const baudRate = options.baudRate || this.SERIAL_BAUD_RATE
 
-      this.port = new SP({ path, baudRate }, (err) => {
-        if (err) {
-          console.error('Error opening port: ', err.message)
-          throw err
-        }
+      // Await the open so failures reach the caller and this.port only ever holds an open port
+      const port = new SP({ path, baudRate, autoOpen: false })
+      await new Promise<void>((resolve, reject) => {
+        port.open((err) => {
+          if (err) {
+            console.error('Error opening port: ', err.message)
+            reject(err)
+          } else {
+            resolve()
+          }
+        })
       })
+      this.port = port
 
       if (options.onDisconnect) {
         this.onDisconnect = options.onDisconnect
